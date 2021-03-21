@@ -1,3 +1,4 @@
+# This is a fork of CGCNN
 # Crystal Graph Convolutional Neural Networks
 
 This software package implements the Crystal Graph Convolutional Neural Networks (CGCNN) that takes an arbitary crystal structure to predict material properties. 

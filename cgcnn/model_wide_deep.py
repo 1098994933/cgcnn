@@ -107,7 +107,7 @@ class CrystalGraphConvNet(nn.Module):
         self.convs = nn.ModuleList([ConvLayer(atom_fea_len=atom_fea_len,
                                     nbr_fea_len=nbr_fea_len)
                                     for _ in range(n_conv)])
-        self.conv_to_fc = nn.Linear(atom_fea_len, h_fea_len)
+        self.conv_to_fc = nn.Linear(atom_fea_len+24, h_fea_len)
         self.conv_to_fc_softplus = nn.Softplus()
         if n_h > 1:
             self.fcs = nn.ModuleList([nn.Linear(h_fea_len, h_fea_len)
@@ -154,8 +154,10 @@ class CrystalGraphConvNet(nn.Module):
         for conv_func in self.convs:
             atom_fea = conv_func(atom_fea, nbr_fea, nbr_fea_idx)
         crys_fea = self.pooling(atom_fea, crystal_atom_idx)
+        #print(crys_fea.shape)
+        #print(wide_fea_idx.shape)
         # add wide  after pooling
-        crys_fea = torch.cat((crys_fea, wide_fea_idx), 1)
+        crys_fea = torch.cat((crys_fea, wide_fea_idx.view(crys_fea.shape[0],-1)), 1)
         crys_fea = self.conv_to_fc(self.conv_to_fc_softplus(crys_fea))
         crys_fea = self.conv_to_fc_softplus(crys_fea)
         if self.classification:
@@ -183,6 +185,7 @@ class CrystalGraphConvNet(nn.Module):
         crystal_atom_idx: list of torch.LongTensor of length N0
           Mapping from the crystal idx to atom idx
         """
+        print(crystal_atom_idx)
         assert sum([len(idx_map) for idx_map in crystal_atom_idx]) ==\
             atom_fea.data.shape[0]
         summed_fea = [torch.mean(atom_fea[idx_map], dim=0, keepdim=True)

@@ -179,6 +179,7 @@ class CrystalGraphConvNet(nn.Module):
           Atom feature vectors of the batch
         crystal_atom_idx: list of torch.LongTensor of length N0
           Mapping from the crystal idx to atom idx
+
         """
         assert sum([len(idx_map) for idx_map in crystal_atom_idx]) ==\
             atom_fea.data.shape[0]

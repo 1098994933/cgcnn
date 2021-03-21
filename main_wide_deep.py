@@ -231,11 +231,14 @@ def train(train_loader, model, criterion, optimizer, epoch, normalizer):
             input_var = (Variable(input[0].cuda(non_blocking=True)),
                          Variable(input[1].cuda(non_blocking=True)),
                          input[2].cuda(non_blocking=True),
-                         [crys_idx.cuda(non_blocking=True) for crys_idx in input[3]])
+                         [crys_idx.cuda(non_blocking=True) for crys_idx in input[4]],
+                         # add
+                         input[3].cuda(non_blocking=True))
         else:
             input_var = (Variable(input[0]),
                          Variable(input[1]),
                          input[2],
+                         input[4],
                          input[3])
         # normalize target
         if args.task == 'regression':
@@ -328,12 +331,14 @@ def validate(val_loader, model, criterion, normalizer, test=False):
                 input_var = (Variable(input[0].cuda(non_blocking=True)),
                              Variable(input[1].cuda(non_blocking=True)),
                              input[2].cuda(non_blocking=True),
-                             [crys_idx.cuda(non_blocking=True) for crys_idx in input[3]])
+                             [crys_idx.cuda(non_blocking=True) for crys_idx in input[4]]
+                             ,input[3].cuda(non_blocking=True))
         else:
             with torch.no_grad():
                 input_var = (Variable(input[0]),
                              Variable(input[1]),
                              input[2],
+                             input[4],
                              input[3])
         if args.task == 'regression':
             target_normed = normalizer.norm(target)

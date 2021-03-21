@@ -13,6 +13,16 @@ from pymatgen.core.structure import Structure
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.data.dataloader import default_collate
 from torch.utils.data.sampler import SubsetRandomSampler
+import pandas as pd
+
+
+def get_wide_feature(mp_index, csv_path="data/sample-wide-deep/get_all_mpcif_features.csv"):
+    """
+    :param mp_index: name of data eg. mp-9999
+    :return: np.array
+    """
+    df = pd.read_csv(csv_path, index_col=0)
+    return df.loc[mp_index, :].values
 
 
 def get_train_val_test_loader(dataset, collate_fn=default_collate,
@@ -126,16 +136,18 @@ def collate_pool(dataset_list):
       Target value for prediction
     batch_cif_ids: list
     """
-    batch_atom_fea, batch_nbr_fea, batch_nbr_fea_idx = [], [], []
+    batch_atom_fea, batch_nbr_fea, batch_nbr_fea_idx,batch_wide_feature= [], [], [],[]
     crystal_atom_idx, batch_target = [], []
     batch_cif_ids = []
     base_idx = 0
-    for i, ((atom_fea, nbr_fea, nbr_fea_idx), target, cif_id)\
+    for i, ((atom_fea, nbr_fea, nbr_fea_idx, wide_feature), target, cif_id)\
             in enumerate(dataset_list):
         n_i = atom_fea.shape[0]  # number of atoms for this crystal
         batch_atom_fea.append(atom_fea)
         batch_nbr_fea.append(nbr_fea)
         batch_nbr_fea_idx.append(nbr_fea_idx+base_idx)
+        # add wide_feature
+        batch_wide_feature.append(wide_feature)
         new_idx = torch.LongTensor(np.arange(n_i)+base_idx)
         crystal_atom_idx.append(new_idx)
         batch_target.append(target)
@@ -144,6 +156,7 @@ def collate_pool(dataset_list):
     return (torch.cat(batch_atom_fea, dim=0),
             torch.cat(batch_nbr_fea, dim=0),
             torch.cat(batch_nbr_fea_idx, dim=0),
+            torch.cat(batch_wide_feature, dim=0),
             crystal_atom_idx),\
         torch.stack(batch_target, dim=0),\
         batch_cif_ids
@@ -311,6 +324,9 @@ class CIFData(Dataset):
         assert os.path.exists(atom_init_file), 'atom_init.json does not exist!'
         self.ari = AtomCustomJSONInitializer(atom_init_file)
         self.gdf = GaussianDistance(dmin=dmin, dmax=self.radius, step=step)
+        # add
+        self.csv_path = "data/sample-wide-deep/get_all_mpcif_features.csv"
+        self.get_wide_feature_data = pd.read_csv(self.csv_path, index_col=0)
 
     def __len__(self):
         return len(self.id_prop_data)
@@ -348,5 +364,5 @@ class CIFData(Dataset):
         nbr_fea_idx = torch.LongTensor(nbr_fea_idx)
         target = torch.Tensor([float(target)])
         # add wide and deep features
-        crystal_atom_idx = torch.Tensor([1])
-        return (atom_fea, nbr_fea, nbr_fea_idx, crystal_atom_idx), target, cif_id
+        wide_feature = torch.Tensor(self.get_wide_feature_data.loc[cif_id, :].values)
+        return (atom_fea, nbr_fea, nbr_fea_idx, wide_feature), target, cif_id
